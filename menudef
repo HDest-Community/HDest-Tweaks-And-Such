@@ -46,12 +46,12 @@ OptionMenu HdestTweaksAndSuch
 
 AddOptionMenu "OptionsMenu"
 {
-    SubMenu "$HDEST_TWEAKS_MENU ", "HdestTweaksAndSuch"
+    SubMenu "$HDEST_TWEAKS_MENU", "HdestTweaksAndSuch"
 }
 
 AddOptionMenu "HDAddonMenu"
 {
-    SubMenu "$HDEST_TWEAKS_MENU ", "HdestTweaksAndSuch"
+    SubMenu "$HDEST_TWEAKS_MENU", "HdestTweaksAndSuch"
 }
 
 OptionValue "KeeperPercent"

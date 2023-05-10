@@ -1,6 +1,6 @@
 OptionMenu HdestTweaksAndSuch
 {
-    Title "------ HDest Tweaks And Such ------"
+    Title "---=== HDest Tweaks And Such ===---"
     StaticText ""
     StaticText " Keepers Options ", "Gold"
     StaticText ""
@@ -46,12 +46,12 @@ OptionMenu HdestTweaksAndSuch
 
 AddOptionMenu "OptionsMenu"
 {
-    SubMenu "$MENU_TTOPTIONS", "HdestTweaksAndSuch"
+    SubMenu "$MENU_HDTASOPTIONS ", "HdestTweaksAndSuch"
 }
 
 AddOptionMenu "HDAddonMenu"
 {
-    SubMenu "$MENU_TTOPTIONS", "HdestTweaksAndSuch"
+    SubMenu "$MENU_HDTASOPTIONS ", "HdestTweaksAndSuch"
 }
 
 OptionValue "KeeperPercent"

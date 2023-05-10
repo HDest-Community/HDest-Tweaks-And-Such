@@ -1,4 +1,4 @@
-# HDest Tweaks And Such\
+# HDest Tweaks And Such
 
 -----------------------------------
 A spiritual successor to Ted Tweaks

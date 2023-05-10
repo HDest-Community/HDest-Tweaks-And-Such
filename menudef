@@ -1,7 +1,6 @@
-// I'm gonna likely clean this up soon once I remember what I've actually changed and make cvars for stuff that can be cvars. This all should be LANGUAGE'd also. - [Ted]
-OptionMenu TedTweaks
+OptionMenu HdestTweaksAndSuch
 {
-    Title "------ Ted Tweaks ------"
+    Title "------ HDest Tweaks And Such ------"
     StaticText ""
     StaticText " Keepers Options ", "Gold"
     StaticText ""

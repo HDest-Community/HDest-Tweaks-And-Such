@@ -46,12 +46,12 @@ OptionMenu HdestTweaksAndSuch
 
 AddOptionMenu "OptionsMenu"
 {
-    SubMenu "$MENU_TTOPTIONS", "TedTweaks"
+    SubMenu "$MENU_TTOPTIONS", "HdestTweaksAndSuch"
 }
 
 AddOptionMenu "HDAddonMenu"
 {
-    SubMenu "$MENU_TTOPTIONS", "TedTweaks"
+    SubMenu "$MENU_TTOPTIONS", "HdestTweaksAndSuch"
 }
 
 OptionValue "KeeperPercent"

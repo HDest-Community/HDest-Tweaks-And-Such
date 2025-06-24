@@ -3,30 +3,76 @@ class KeeperHandler : EventHandler
 {
 	override void PlayerDied(PlayerEvent e)
 	{
-		let plr = HDPlayerPawn(players[e.PlayerNumber].mo);
-		if (plr)
-		{
-			let restorer = StatRestorer(plr.GiveInventoryType('StatRestorer'));
-			if (restorer)
+		if(keeper_fixed_limit)
+		{	
+			// keeper code version that uses hard fixed limits
+			let plr = HDPlayerPawn(players[e.PlayerNumber].mo);
+			if (plr)
 			{
-				restorer.Wounds = int(plr.oldwoundcount * clamp(keeper_percent_tissuedamage, 0, 1.0));
-				restorer.Blues = int(plr.CountInv('HealingMagic') * clamp(keeper_percent_blues, 0, 1.0));
-				restorer.Burns = int(plr.burncount * clamp(keeper_percent_burns, 0, 1.0));
-				restorer.Aggro = int(plr.aggravateddamage * clamp(keeper_percent_aggro, 0, 1.0));
-				restorer.Bloodloss = int(plr.bloodloss * clamp(keeper_percent_blood, 0, 1.0));
-
-				Name diseaseClsName = 'DiseaseBase';
-				if (keeper_percent_diseases > 0 && (class<Inventory>)(diseaseClsName))
+				let restorer = StatRestorer(plr.GiveInventoryType('StatRestorer'));
+				if (restorer)
 				{
-					for (Inventory next = plr.Inv; next != null; next = next.Inv)
+					restorer.Wounds = int(plr.oldwoundcount * clamp(keeper_percent_tissuedamage, 0, 1.0));
+					
+					restorer.Blues = int(plr.CountInv('HealingMagic'));
+					
+					if(plr.burncount > keeper_fixed_burns)
 					{
-						if (next is diseaseClsName)
+					restorer.Burns = 70;
+					}
+					else
+					restorer.Burns = plr.burncount;
+					
+					restorer.Aggro = int(plr.aggravateddamage * clamp(keeper_percent_aggro, 0, 1.0));
+					
+					restorer.Bloodloss = int(plr.bloodloss * clamp(keeper_percent_blood, 0, 1.0));
+
+					Name diseaseClsName = 'DiseaseBase';
+					if (keeper_percent_diseases > 0 && (class<Inventory>)(diseaseClsName))
+					{
+						for (Inventory next = plr.Inv; next != null; next = next.Inv)
 						{
-							int amt = int(next.Amount * clamp(keeper_percent_diseases, 0, 1.0));
-							if (amt > 0)
+							if (next is diseaseClsName)
 							{
-								restorer.DiseaseClasses.Push(next.GetClass());
-								restorer.DiseaseAmounts.Push(amt);
+								int amt = int(next.Amount * clamp(keeper_percent_diseases, 0, 1.0));
+								if (amt > 0)
+								{
+									restorer.DiseaseClasses.Push(next.GetClass());
+									restorer.DiseaseAmounts.Push(amt);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		else
+		{
+			let plr = HDPlayerPawn(players[e.PlayerNumber].mo);
+			if (plr)
+			{
+				let restorer = StatRestorer(plr.GiveInventoryType('StatRestorer'));
+				if (restorer)
+				{
+					restorer.Wounds = int(plr.oldwoundcount * clamp(keeper_percent_tissuedamage, 0, 1.0));
+					restorer.Blues = int(plr.CountInv('HealingMagic') * clamp(keeper_percent_blues, 0, 1.0));
+					restorer.Burns = int(plr.burncount * clamp(keeper_percent_burns, 0, 1.0));
+					restorer.Aggro = int(plr.aggravateddamage * clamp(keeper_percent_aggro, 0, 1.0));
+					restorer.Bloodloss = int(plr.bloodloss * clamp(keeper_percent_blood, 0, 1.0));
+
+					Name diseaseClsName = 'DiseaseBase';
+					if (keeper_percent_diseases > 0 && (class<Inventory>)(diseaseClsName))
+					{
+						for (Inventory next = plr.Inv; next != null; next = next.Inv)
+						{
+							if (next is diseaseClsName)
+							{
+								int amt = int(next.Amount * clamp(keeper_percent_diseases, 0, 1.0));
+								if (amt > 0)
+								{
+									restorer.DiseaseClasses.Push(next.GetClass());
+									restorer.DiseaseAmounts.Push(amt);
+								}
 							}
 						}
 					}
@@ -77,3 +123,14 @@ class StatRestorer : Inventory
 		Inventory.MaxAmount 1;
 	}
 }
+
+//	blues = 100%
+//	
+//	bloodloss
+//	burns 
+//	aggro
+//	
+//	
+//
+//
+//

@@ -4,6 +4,11 @@ server float keeper_percent_aggro = 0.6;
 server float keeper_percent_blood = 0.6;
 server float keeper_percent_diseases = 0.6;
 server float keeper_percent_blues = 0.6;
+server bool keeper_fixed_limit = false;
+server int keeper_fixed_burns = 60;
+server int keeper_fixed_aggro = 20;
+server int keeper_fixed_blood = 512;
+
 server bool hd_nonecroghost = false;
 
 server int bonus_clean_bias = -1;

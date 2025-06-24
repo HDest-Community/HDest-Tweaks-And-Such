@@ -11,42 +11,44 @@ class KeeperHandler : EventHandler
 			{
 				let restorer = StatRestorer(plr.GiveInventoryType('StatRestorer'));
 				if (restorer)
-				{
-					restorer.Wounds = int(plr.oldwoundcount * clamp(keeper_percent_tissuedamage, 0, 1.0));
-					
+				{	
+					// old wounds
+					if(plr.oldwoundcount > keeper_fixed_wounds)
+					{
+					restorer.Wounds = keeper_fixed_wounds;
+					}
+					else
+					restorer.Wounds = plr.bloodloss;
+					//biased balance change but i dislike blues vanishing on death
 					restorer.Blues = int(plr.CountInv('HealingMagic'));
-					
+					//burns
 					if(plr.burncount > keeper_fixed_burns)
 					{
-					restorer.Burns = 70;
+					restorer.Burns = keeper_fixed_burns;
 					}
 					else
 					restorer.Burns = plr.burncount;
 					
-					restorer.Aggro = int(plr.aggravateddamage * clamp(keeper_percent_aggro, 0, 1.0));
-					
-					restorer.Bloodloss = int(plr.bloodloss * clamp(keeper_percent_blood, 0, 1.0));
-
-					Name diseaseClsName = 'DiseaseBase';
-					if (keeper_percent_diseases > 0 && (class<Inventory>)(diseaseClsName))
+					// blood
+					if(plr.bloodloss > keeper_fixed_blood)
 					{
-						for (Inventory next = plr.Inv; next != null; next = next.Inv)
-						{
-							if (next is diseaseClsName)
-							{
-								int amt = int(next.Amount * clamp(keeper_percent_diseases, 0, 1.0));
-								if (amt > 0)
-								{
-									restorer.DiseaseClasses.Push(next.GetClass());
-									restorer.DiseaseAmounts.Push(amt);
-								}
-							}
-						}
+					restorer.Bloodloss = keeper_fixed_blood;
 					}
+					else
+					restorer.Bloodloss = plr.bloodloss;
+					
+					// aggro
+					if(plr.aggravateddamage > keeper_fixed_aggro)
+					{
+					restorer.Aggro = keeper_fixed_aggro;
+					}
+					else
+					restorer.Aggro = plr.aggravateddamage;
+					// i don't even know what diseases are from so they are cut for the moment.
 				}
 			}
 		}
-		else
+		else	//og keeper logic by ace below
 		{
 			let plr = HDPlayerPawn(players[e.PlayerNumber].mo);
 			if (plr)
@@ -94,7 +96,14 @@ class StatRestorer : Inventory
 			plr.A_GiveInventory('HealingMagic', Blues);
 			plr.aggravateddamage = Aggro;
 			plr.burncount = Burns;
-			plr.bloodloss = min(HDCONST_MAXBLOODLOSS, plr.bloodloss + Bloodloss); // [Ace] Add to PoF's bloodloss.
+			if(keeper_fixed_limit)
+			{
+				plr.bloodloss = Bloodloss;
+			}
+			else
+			{
+				plr.bloodloss = min(HDCONST_MAXBLOODLOSS, plr.bloodloss + Bloodloss);
+			}// [Ace] Add to PoF's bloodloss.
 
 			for (int i = 0; i < DiseaseClasses.Size(); ++i)
 			{

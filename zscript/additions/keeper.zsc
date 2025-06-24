@@ -18,9 +18,11 @@ class KeeperHandler : EventHandler
 					restorer.Wounds = keeper_fixed_wounds;
 					}
 					else
-					restorer.Wounds = plr.bloodloss;
+					restorer.Wounds = plr.oldwoundcount;
+					
 					//biased balance change but i dislike blues vanishing on death
 					restorer.Blues = int(plr.CountInv('HealingMagic'));
+					
 					//burns
 					if(plr.burncount > keeper_fixed_burns)
 					{

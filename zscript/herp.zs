@@ -66,7 +66,7 @@ class HERPBot:HDUPK{
 		//$Sprite "HERPA1"
 		+ismonster +noblockmonst +friendly +standstill +nofear
 		+shootable +ghost +noblood +dontgib
-		+missilemore //on/off
+		+nobouncesound //on/off
 		+nobouncesound
 		height 9;radius 7;mass 400;health 200;
 		damagefactor "hot",0.7;
@@ -88,7 +88,7 @@ class HERPBot:HDUPK{
 	override bool cancollidewith(actor other,bool passive){return other.bmissile||HDPickerUpper(other);}
 	override bool ongrab(actor other){
 		if(ishostile(other)){
-			bmissilemore=false;
+			bnobouncesound=false;
 			setstatelabel("off");
 		}
 		return true;
@@ -162,7 +162,7 @@ class HERPBot:HDUPK{
 		){
 			target=source;
 			setz(target.pos.z+target.height*0.7);
-			setstatelabel("give");
+			if(!instatesequence(curstate,resolvestate("give")))setstatelabel("give");
 			return -1;
 		}
 		return super.damagemobj(inflictor,source,damage,mod,flags,angle);
@@ -198,11 +198,11 @@ class HERPBot:HDUPK{
 			setstatelabel("death");
 			return;
 		}
-		if(!bmissilemore){
+		if(!bnobouncesound){
 			setstatelabel("off");
 			return;
 		}
-		if(bmissileevenmore){
+		if(bnowallbouncesnd){
 			setstatelabel("inputready");
 			return;
 		}
@@ -319,7 +319,7 @@ class HERPBot:HDUPK{
 		}
 		HERP A 20{
 			if(master){
-				bmissileevenmore=true;
+				bnowallbouncesnd=true;
 				herpbeep("herp/beepready");
 				message(Stringtable.Localize("$HERP_CONNECTED"));
 			}else{
@@ -335,7 +335,7 @@ class HERPBot:HDUPK{
 		,"inputabort");
 		wait;
 	inputabort:
-		HERP A 4{bmissileevenmore=false;}
+		HERP A 4{bnowallbouncesnd=false;}
 		HERP A 2 herpbeep("herp/beepready");
 		HERP A 20 message(Stringtable.Localize("$HERP_DISCONNECTED"));
 		goto spawn;
@@ -368,7 +368,7 @@ class HERPBot:HDUPK{
 			){
 				message(Stringtable.Localize("$HERP_NOMAG"));
 				if(currammoraw>100&&!random(0,3))ammo[0]--;
-				bmissilemore=random(0,15);
+				bnobouncesound=random(0,15);
 				setstatelabel("off");
 				return;
 			}
@@ -440,7 +440,7 @@ class HERPBot:HDUPK{
 		HERP A 10;
 		HERP A 0{
 			if(
-				!bmissilemore
+				!bnobouncesound
 				||(
 					ammo[0]%100<1
 					&&ammo[1]%100<1
@@ -555,6 +555,7 @@ class HERPUsable:HDWeapon{
 		//$Title "H.E.R.P. Robot (Pickup)"
 		//$Sprite "HERPA1"
 		+weapon.wimpy_weapon
+		+weapon.no_auto_switch
 		+inventory.invbar
 		+hdweapon.droptranslation
 		+hdweapon.fitsinbackpack
@@ -562,10 +563,12 @@ class HERPUsable:HDWeapon{
 		inventory.maxamount 1;
 		inventory.icon "HERPEX";
 		inventory.pickupsound "misc/w_pkup";
-		inventory.pickupmessage "$PICKUP_DERP";
+		inventory.pickupmessage "$PICKUP_HERP";
 		tag "$TAG_HERP";
 		hdweapon.refid HDLD_HERPBOT;
 		weapon.selectionorder 1015;
+		hdweapon.ammo1 "HD4mMag",1;
+		hdweapon.ammo2 "HDBattery",1;
 	}
 	override string pickupmessage(){
 		string msg=Super.Pickupmessage();
@@ -579,7 +582,6 @@ class HERPUsable:HDWeapon{
 		if(weaponstatus[1]>=0)amt+=3.6;
 		if(weaponstatus[2]>=0)amt+=3.6;
 		if(weaponstatus[3]>=0)amt+=3.6;
-		if(owner&&owner.player.cmd.buttons&BT_ZOOM)amt*=frandom(3,4);
 		return amt;
 	}
 	override double weaponbulk(){
@@ -741,7 +743,7 @@ class HERPUsable:HDWeapon{
 			invoker.weaponstatus[1]=currammo;
 			A_Overlay(PSP_FLASH,"directflash");
 		}
-		HERG B 2;
+		HERG BB 1 A_WeaponReady(WRF_NOFIRE);
 		HERG A 0 A_JumpIf(!pressingzoom(),"lowerfromfire");
 		HERG A 0 A_Refire("directfire");
 		goto readytofire;
@@ -764,7 +766,7 @@ class HERPUsable:HDWeapon{
 			);
 		}stop;
 	directfail:
-		HERG # 1 A_WeaponReady(WRF_NONE);
+		HERG # 1 A_WeaponReady(WRF_NOFIRE);
 		HERG # 0 A_JumpIf(pressingfire(),"directfail");
 		goto readytofire;
 	lowerfromfire:
@@ -891,13 +893,13 @@ class HERPUsable:HDWeapon{
 		hhhh.ammo[2]=invoker.weaponstatus[3];
 		hhhh.battery=invoker.weaponstatus[4];
 		hhhh.botid=invoker.weaponstatus[HERP_BOTID];
-		hhhh.bmissilemore=(!invoker.weaponstatus[0]&HERPF_STARTOFF);
+		hhhh.bnobouncesound=!(invoker.weaponstatus[0]&HERPF_STARTOFF);
 		hhhh.bdontfacetalker=invoker.weaponstatus[0]&HERPF_STATIC;
-		Message("Deployed.");
+		Message(StringTable.Localize("$HERP_DEPLOYED"));
 		A_GiveInventory("HERPController");
 		HERPController(findinventory("HERPController")).UpdateHerps(false);
 		dropinventory(invoker);
-		invoker.destroy();
+		invoker.GoAwayAndDie();
 		return;
 	}
 	override void DrawHUDStuff(HDStatusBar sb,HDWeapon hdw,HDPlayerPawn hpl){
@@ -918,6 +920,24 @@ class HERPUsable:HDWeapon{
 			sb.DI_TEXT_ALIGN_RIGHT|sb.DI_TRANSLATABLE|sb.DI_SCREEN_CENTER_BOTTOM,
 			Font.CR_DARKGRAY
 		);else if(batt>0)sb.drawwepnum(batt,20);
+
+		if(sb.hudlevel==1){
+			int nextmagloaded=sb.GetNextLoadMag(hdmagammo(hpl.findinventory("HD4mMag")));
+			if(nextmagloaded>50){
+				sb.drawimage("ZMAGA0",(-46,-3),sb.DI_SCREEN_CENTER_BOTTOM,scale:(2,2));
+			}else if(nextmagloaded<1){
+				sb.drawimage("ZMAGC0",(-46,-3),sb.DI_SCREEN_CENTER_BOTTOM,alpha:nextmagloaded?0.6:1.,scale:(2,2));
+			}else sb.drawbar(
+				"ZMAGNORM","ZMAGGREY",
+				nextmagloaded,50,
+				(-46,-3),-1,
+				sb.SHADER_VERT,sb.DI_SCREEN_CENTER_BOTTOM
+			);
+			sb.drawbattery(-64,-4,sb.DI_SCREEN_CENTER_BOTTOM,reloadorder:true);
+			sb.drawnum(hpl.countinv("HD4mMag"),-43,-8,sb.DI_SCREEN_CENTER_BOTTOM);
+			sb.drawnum(hpl.countinv("HDBattery"),-56,-8,sb.DI_SCREEN_CENTER_BOTTOM);
+		}
+
 		if(barrellength>0)return;
 		int yofs=weaponstatus[HERP_YOFS];
 		if(yofs<70){
@@ -951,17 +971,18 @@ class HERPUsable:HDWeapon{
 		}
 	}
 	override string gethelptext(){
+		LocalizeHelp();
 		return
 		((weaponstatus[0]&HERPF_BROKEN)?
-		(WEPHELP_FIRE.."+"..WEPHELP_RELOAD.." (hold)  Repair\n"):(WEPHELP_FIRE.."  Deploy\n"))
-		..WEPHELP_ALTFIRE.."  Cycle modes\n"
-		..WEPHELP_FIREMODE.."+"..WEPHELP_UPDOWN.."  Set BotID\n"
-		..WEPHELP_RELOAD.."  Reload mag\n"
-		..WEPHELP_ALTRELOAD.."  Reload battery\n"
-		..WEPHELP_UNLOAD.."  Unload mag\n"
-		..WEPHELP_USE.."+"..WEPHELP_ALTRELOAD.."  Unload battery\n"
-		..WEPHELP_USE.."+"..WEPHELP_UNLOAD.."  Unload partial mag\n"
-		..WEPHELP_ZOOM.."  Manual firing"
+		(LWPHELP_FIRE.."+"..LWPHELP_RELOAD..StringTable.Localize("$DERPWH_REPAIR")):(LWPHELP_FIRE..StringTable.Localize("$DERPWH_FIRE")))
+		..LWPHELP_ALTFIRE..StringTable.Localize("$DERPWH_ALTFIRE")
+		..LWPHELP_FIREMODE.."+"..LWPHELP_UPDOWN..StringTable.Localize("$DERPWH_FMODPUD")
+		..LWPHELP_RELOAD..StringTable.Localize("$HERPWH_RELOAD")
+		..LWPHELP_ALTRELOAD..StringTable.Localize("$HERPWH_ALTRELOAD")
+		..LWPHELP_UNLOAD..StringTable.Localize("$HERPWH_UNLOAD")
+		..LWPHELP_USE.."+"..LWPHELP_ALTRELOAD..StringTable.Localize("$HERPWH_USEPALTRELOAD")
+		..LWPHELP_USE.."+"..LWPHELP_UNLOAD..StringTable.Localize("$HERPWH_USEPUNLOAD")
+		..LWPHELP_ZOOM..StringTable.Localize("$HERPWH_ZOOM")
 		;
 	}
 	static int backpackrepairs(actor owner,hdbackpack bp){
@@ -997,7 +1018,8 @@ class HERPUsable:HDWeapon{
 			frandom(-1.,1.),frandom(-1.,1.),
 			frandom(-1.,1.),frandom(-1.,1.),
 			frandom(-1.,1.),frandom(-1.,1.),
-			frandom(-1.,1.),frandom(0.,1.)
+			frandom(-1.,1.),frandom(0.,1.),
+			wepdot:false
 		);
 	}
 	bool RepairAttempt(){
@@ -1094,10 +1116,8 @@ class HERPUsable:HDWeapon{
 	}
 	override void ForceBasicAmmo(){
 		owner.A_TakeInventory("FourMilAmmo");
-		owner.A_TakeInventory("HD4mMag");
-		owner.A_GiveInventory("HD4mMag",3);
-		owner.A_TakeInventory("HDBattery");
-		owner.A_GiveInventory("HDBattery");
+		ForceOneBasicAmmo("HDBattery");
+		ForceOneBasicAmmo("HD4mMag");
 	}
 }
 enum HERPNum{
@@ -1125,7 +1145,7 @@ extend class HDHandlers{
 			&&hpu.weaponstatus[HERPS_INDEX]<hpu.herps.size()
 			&&hpu.herps[hpu.weaponstatus[HERPS_INDEX]]
 			&&hpu.herps[hpu.weaponstatus[HERPS_INDEX]].battery>0
-			&&!hpu.herps[hpu.weaponstatus[HERPS_INDEX]].bmissilemore
+			&&!hpu.herps[hpu.weaponstatus[HERPS_INDEX]].bnobouncesound
 		)hpu.setownerweaponstate("hack");
 		else ppp.A_Log(Stringtable.Localize("$HERP_NOCONTROLLER"),true);
 	}
@@ -1170,13 +1190,13 @@ extend class HDHandlers{
 						ppp.A_Log(string.format(Stringtable.Localize("$HERP_EMPTY"),herp.pos.x,herp.pos.y),true);
 					}else{
 						affected++;
-						herp.bmissilemore=true;
+						herp.bnobouncesound=true;
 					}
 				}
 				else if(botcmd==2){
 					affected++;
 					badcommand=false;
-					herp.bmissilemore=false;
+					herp.bnobouncesound=false;
 				}
 				else if(botcmd==3){
 					if(!achange){
@@ -1202,7 +1222,7 @@ extend class HDHandlers{
 						herp.pos.x,herp.pos.y,
 						hdmath.cardinaldirection(herp.startangle),
 						herp.botid,
-						herp.bmissilemore?Stringtable.Localize("$HERP_ACTIVE"):Stringtable.Localize("$HERP_INACTIVE")
+						herp.bnobouncesound?Stringtable.Localize("$HERP_ACTIVE"):Stringtable.Localize("$HERP_INACTIVE")
 					),true);
 				}
 				else{
@@ -1236,7 +1256,7 @@ class HERPController:HDWeapon{
 		+hdweapon.droptranslation
 		inventory.icon "HERPA5";
 		weapon.selectionorder 1013;
-		tag "H.E.R.P. interface";
+		tag "$TAG_HERPINTERFACE";
 	}
 	array<herpbot> herps;
 	herpbot UpdateHerps(bool resetindex=true){
@@ -1260,7 +1280,7 @@ class HERPController:HDWeapon{
 				owner.A_Log(Stringtable.Localize("$HERP_NODEPLOYED"),true);
 				owner.A_SelectWeapon("HDFist");
 			}
-			destroy();
+			GoAwayAndDie();
 			return null;
 		}
 		herpbot ddd=herps[0];
@@ -1291,31 +1311,32 @@ class HERPController:HDWeapon{
 		return null;
 	}
 	override string gethelptext(){
-		if(!herps.size())return "ERROR";
+		LocalizeHelp();
+		if(!herps.size())return "$HERP_ERROR";
 		weaponstatus[HERPS_INDEX]=clamp(weaponstatus[HERPS_INDEX],0,herps.size()-1);
 		let herpcam=herps[weaponstatus[HERPS_INDEX]];
-		if(!herpcam)return "ERROR";
+		if(!herpcam)return "$HERP_ERROR";
 		if(
 			herpcam.health<1
 			||herpcam.battery<1
-		)return WEPHELP_DROP.."  Next H.E.R.P.";
-		bool connected=(herpcam.bmissileevenmore);
-		bool turnedon=(herpcam.bmissilemore);
+		)return LWPHELP_DROP..StringTable.Localize("$HERPCWH_DROP");
+		bool connected=(herpcam.bnowallbouncesnd);
+		bool turnedon=(herpcam.bnobouncesound);
 		bool staystill=(herpcam.bdontfacetalker);
 		if(connected)return
-		WEPHELP_FIREMODE.."  Hold to pilot and:\n"
-		.."  "..WEPHELP_FIRESHOOT
-		..WEPHELP_ALTRELOAD.."  Set home angle\n"
-		..WEPHELP_ALTFIRE.."  Turn "..(turnedon?"Off":"On").."\n"
-		..WEPHELP_ZOOM.."  "..(staystill?"Enable":"Disable").." Horizontal Scan\n"
-		..WEPHELP_RELOAD.."  Disconnect manual mode\n"
-		..WEPHELP_DROP.."  Next H.E.R.P."
+		LWPHELP_FIREMODE..StringTable.Localize("$HERPCWH_FMODE")
+		.."  "..LWPHELP_FIRESHOOT
+		..LWPHELP_ALTRELOAD..StringTable.Localize("$HERPCWH_ALTRELOAD")
+		..LWPHELP_ALTFIRE..StringTable.Localize("$HERPCWH_ALTFIRE1")..(turnedon?StringTable.Localize("$HERPCWH_ALTFIRE2"):StringTable.Localize("$HERPCWH_ALTFIRE3")).."\n"
+		..LWPHELP_ZOOM.."  "..(staystill?StringTable.Localize("$HERPCWH_ZOOM1"):StringTable.Localize("$HERPCWH_ZOOM2"))..StringTable.Localize("$HERPCWH_ZOOM3")
+		..LWPHELP_RELOAD..StringTable.Localize("$HERPCWH_RELOAD")
+		..LWPHELP_DROP..StringTable.Localize("$HERPCWH_DROP")
 		;
 		return
-		WEPHELP_RELOAD.."  Connect manual mode\n"
-		..WEPHELP_ALTFIRE.."  Turn "..(turnedon?"Off":"On").."\n"
-		..WEPHELP_ZOOM.."  "..(staystill?"Enable":"Disable").." Horizontal Scan\n"
-		..WEPHELP_DROP.."  Next H.E.R.P."
+		LWPHELP_RELOAD..StringTable.Localize("$HERPCWH_RELOAD2")
+		..LWPHELP_ALTFIRE..StringTable.Localize("$HERPCWH_ALTFIRE1")..(turnedon?StringTable.Localize("$HERPCWH_ALTFIRE2"):StringTable.Localize("$HERPCWH_ALTFIRE3")).."\n"
+		..LWPHELP_ZOOM.."  "..(staystill?StringTable.Localize("$HERPCWH_ZOOM1"):StringTable.Localize("$HERPCWH_ZOOM2"))..StringTable.Localize("$HERPCWH_ZOOM3")
+		..LWPHELP_DROP..StringTable.Localize("$HERPCWH_DROP")
 		;
 	}
 	override void DrawSightPicture(
@@ -1329,7 +1350,7 @@ class HERPController:HDWeapon{
 		let herpcam=herps[weaponstatus[HERPS_INDEX]];
 		if(!herpcam)return;
 		bool dead=herpcam.health<1;
-		bool nobat=dead||!herpcam.bmissilemore||herpcam.battery<1;
+		bool nobat=dead||!herpcam.bnobouncesound||herpcam.battery<1;
 		int scaledyoffset=46;
 		name ctex=nobat?"HDXHCAM1BLANK":"HDXCAM_HERP";
 		if(!nobat)texman.setcameratotexture(herpcam,ctex,60);
@@ -1355,13 +1376,13 @@ class HERPController:HDWeapon{
 			sb.psmallfont,"<>",
 			(bob.x-24,64+bob.y),sb.DI_SCREEN_CENTER|sb.DI_TEXT_ALIGN_CENTER,Font.CR_DARKGRAY,alpha:0.4
 		);
-		string hpst1="\cxAUTO",hpst2="press \cdreload\cu for manual";
+		string hpst1=StringTable.Localize("$HERP_AUTO"),hpst2=StringTable.Localize("$HERP_RELOAD");
 		if(nobat){
-			hpst1="\cuOFF";
-			hpst2="press \cdaltfire\cu to turn on";
-		}else if(herpcam.bmissileevenmore){
-			hpst1="\cyMANUAL";
-			hpst2=(owner.player.cmd.buttons&BT_FIREMODE)?"":"hold \cdfiremode\cu to steer";
+			hpst1=StringTable.Localize("$HERP_OFF");
+			hpst2=StringTable.Localize("$HERP_ALTFIRE");
+		}else if(herpcam.bnowallbouncesnd){
+			hpst1=StringTable.Localize("$HERP_MANUAL");
+			hpst2=(owner.player.cmd.buttons&BT_FIREMODE)?"":StringTable.Localize("$HERP_FMODE");
 		}
 		sb.drawstring(
 			sb.psmallfont,hpst1,
@@ -1391,7 +1412,7 @@ class HERPController:HDWeapon{
 			A_WeaponReady(WRF_NOFIRE|WRF_ALLOWUSER3);
 			herpbot ddd=invoker.herps[invoker.weaponstatus[HERPS_INDEX]];
 			if(!ddd){
-				if(ddd=invoker.updateherps())A_Log("H.E.R.P. not found. Resetting list.",true);
+				if(ddd=invoker.updateherps())A_Log(StringTable.Localize("$HERP_NOTFOUND"),true);
 				return;
 			}
 			int bt=player.cmd.buttons;
@@ -1400,7 +1421,7 @@ class HERPController:HDWeapon{
 				||ddd.distance3d(self)>frandom(0.9,1.1)*HERP_CONTROLRANGE
 			)return;
 			if(justpressed(BT_ALTATTACK)){
-				ddd.bmissilemore=!ddd.bmissilemore;
+				ddd.bnobouncesound=!ddd.bnobouncesound;
 				ddd.herpbeep();
 			}
 
@@ -1409,8 +1430,8 @@ class HERPController:HDWeapon{
 				ddd.herpbeep();
 			}
 			if(
-				ddd.bmissileevenmore
-				&&ddd.bmissilemore
+				ddd.bnowallbouncesnd
+				&&ddd.bnobouncesound
 			){
 				if(justpressed(BT_RELOAD)){
 					ddd.setstatelabel("inputabort");
@@ -1437,7 +1458,7 @@ class HERPController:HDWeapon{
 				if(justpressed(BT_USER1)){
 					ddd.startangle=ddd.angle;
 					ddd.herpbeep();
-					A_Log("Home angle set.",true);
+					A_Log(StringTable.Localize("$HERP_HOMEANGLE"),true);
 				}
 			}else if(justpressed(BT_RELOAD)){
 				ddd.setstatelabel("inputwaiting");
@@ -1449,7 +1470,7 @@ class HERPController:HDWeapon{
 		---- A 0 A_MagManager("HD4mMag");
 		goto ready;
 	hack:
-		---- A 5 A_Log("Fetching nearby devices...",true);
+		---- A 5 A_Log(StringTable.Localize("$HERP_FETCHINNG"),true);
 		---- AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA 1 A_WeaponReady(WRF_NOFIRE|WRF_ALLOWUSER3);
 		---- AAAAAAAAAAAAAAAAAAA 1 A_WeaponMessage("\cj"..random(1000,9999).." "..random(1000,9999),10);
 		---- A 0{
@@ -1484,25 +1505,25 @@ class HERPController:HDWeapon{
 					if(opponent){
 						let opcon=HERPController(opponent.findinventory("HERPController"));
 						if(opcon)opcon.updateherps(false);
-						mo.message("Operational fault. Please check your manual for proper maintenance. (ERR-4fd92-00B) Power low.");
+						mo.message(StringTable.Localize("$HERP_NOBATTERY"));
 					}
-					owner.A_Log("H.E.R.P. connected.",true);
-					mo.bmissilemore=false;
+					owner.A_Log(StringTable.Localize("$HERP_CONNECT"),true);
+					mo.bnobouncesound=false;
 					if(owner.player)mo.bfriendly=true;else mo.bfriendly=owner.bfriendly;
 					mo.A_StartSound("herp/hacked",69420);
 					updateherps();
 					return true;
 				}else{
-					owner.A_Log("Connection error. H.E.R.P. not found or credentials expired. Please email vendor technical support for assistance.",true);
+					owner.A_Log(StringTable.Localize("$HERP_CONNERROR"),true);
 					mo.target=owner;
-					mo.message("IFF system alert: enemy pattern recognized.");
+					mo.message(StringTable.Localize("$HERP_ENEMY"));
 					mo.startangle=mo.angleto(owner);
-					mo.bmissilemore=true;
+					mo.bnobouncesound=true;
 					return false;
 				}
 			}
 		}
-		owner.A_Log("H.E.R.P. remote login attempt failed.",true);
+		owner.A_Log(StringTable.Localize("$HERP_REMOTEFAILED"),true);
 		return false;
 	}
 }

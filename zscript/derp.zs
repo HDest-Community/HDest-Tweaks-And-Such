@@ -8,7 +8,7 @@
 	0=random (default), see DerpConst below for the others
 */
 
-const DERP_CONTROLRANGE=HDCONST_ONEMETRE*250.;
+const DERP_CONTROLRANGE=HDCONST_ONEMETRE*200.;
 enum DerpConst{
 	DERP_IDLE=1,
 	DERP_WATCH=2,
@@ -235,7 +235,7 @@ class DERPBot:HDUPK{
 		){
 			target=source;
 			setz(target.pos.z+target.height*0.7);
-			setstatelabel("give");
+			if(!instatesequence(curstate,resolvestate("give")))setstatelabel("give");
 			return -1;
 		}
 		return super.damagemobj(inflictor,source,damage,mod,flags,angle);
@@ -400,6 +400,7 @@ class DERPUsable:HDWeapon{
 		//$Title "D.E.R.P. Robot (Pickup)"
 		//$Sprite "DERPA1"
 		+weapon.wimpy_weapon
+		+weapon.no_auto_switch
 		+inventory.invbar
 		+hdweapon.droptranslation
 		+hdweapon.fitsinbackpack
@@ -407,11 +408,12 @@ class DERPUsable:HDWeapon{
 		weapon.selectionorder 1014;
 		scale 0.6;
 		inventory.icon "DERPEX";
-		inventory.pickupmessage "$PICKUP_DERP.";
+		inventory.pickupmessage "$PICKUP_DERP";
 		inventory.pickupsound "derp/crawl";
 		translation 0;
 		tag "$TAG_DERP";
 		hdweapon.refid HDLD_DERPBOT;
+		hdweapon.ammo1 "HD9mMag15",1;
 	}
 	override bool AddSpareWeapon(actor newowner){return AddSpareWeaponRegular(newowner);}
 	override hdweapon GetSpareWeapon(actor newowner,bool reverse,bool doselect){return GetSpareWeaponRegular(newowner,reverse,doselect);}
@@ -438,7 +440,7 @@ class DERPUsable:HDWeapon{
 	}
 	override string pickupmessage(){
 		string msg=super.pickupmessage();
-		if(weaponstatus[0]&DERPF_BROKEN)return msg..Stringtable.Localize("PICKUP_DERP_BROKEN");
+		if(weaponstatus[0]&DERPF_BROKEN)return msg..Stringtable.Localize("$PICKUP_DERP_BROKEN");
 		return msg;
 	}
 	override void detachfromowner(){
@@ -496,13 +498,14 @@ class DERPUsable:HDWeapon{
 		sb.drawwepnum(hdw.weaponstatus[DERPS_AMMO],15);
 	}
 	override string gethelptext(){
+		LocalizeHelp();
 		return
 		((weaponstatus[0]&DERPF_BROKEN)?
-		(WEPHELP_FIRE.."+"..WEPHELP_RELOAD.." (hold) Repair\n"):(WEPHELP_FIRE.."  Deploy\n"))
-		..WEPHELP_ALTFIRE.."  Cycle modes\n"
-		..WEPHELP_FIREMODE.."+"..WEPHELP_UPDOWN.."  Set BotID\n"
-		..WEPHELP_RELOADRELOAD
-		..WEPHELP_UNLOADUNLOAD
+		(LWPHELP_FIRE.."+"..LWPHELP_RELOAD..StringTable.Localize("$DERPWH_REPAIR")):(LWPHELP_FIRE..StringTable.Localize("$DERPWH_FIRE")))
+		..LWPHELP_ALTFIRE..StringTable.Localize("$DERPWH_ALTFIRE")
+		..LWPHELP_FIREMODE.."+"..LWPHELP_UPDOWN..StringTable.Localize("$DERPWH_FMODPUD")
+		..LWPHELP_RELOADRELOAD
+		..LWPHELP_UNLOADUNLOAD
 		;
 	}
 	action void A_AddOffset(int ofs){
@@ -746,7 +749,8 @@ class DERPUsable:HDWeapon{
 				frandom(-1.,1.),frandom(-1.,1.),
 				frandom(-1.,1.),frandom(-1.,1.),
 				frandom(-1.,1.),frandom(-1.,1.),
-				frandom(-1.,1.),frandom(0.,1.)
+				frandom(-1.,1.),frandom(0.,1.),
+				wepdot:false
 			);
 		}
 		TNT1 A 0 A_JumpIf(!(invoker.weaponstatus[0]&DERPF_BROKEN),"nope");
@@ -956,7 +960,7 @@ extend class HDHandlers{
 		}
 		if(badcommand){
 			let dpu=DERPUsable(ppp.findinventory("DERPUsable"));
-			ppp.A_Print(string.format(Stringtable.Localize("$DERP_BADCOMMAND"),dpu?dpu.weaponstatus[DERPS_BOTID]:1),9);
+			ppp.A_Log(string.format(Stringtable.Localize("$DERP_BADCOMMAND"),dpu?dpu.weaponstatus[DERPS_BOTID]:1),true);
 		}
 	}
 }
@@ -986,7 +990,7 @@ class DERPController:HDWeapon{
 		}
 		if(resetindex)weaponstatus[DRPCS_INDEX]=0;
 		if(!derps.size()){
-			destroy();
+			GoAwayAndDie();
 			return null;
 		}
 		derpbot ddd=derps[0];
@@ -1023,14 +1027,15 @@ class DERPController:HDWeapon{
 		return weapon.createtossable(amt);
 	}
 	override string gethelptext(){
+		LocalizeHelp();
 		return
-		WEPHELP_FIREMODE.."  Hold to pilot\n"
-		..WEPHELP_FIRESHOOT
-		..WEPHELP_ALTFIRE.."  Forwards\n"
-		..WEPHELP_USE.."  Backwards\n"
-		..WEPHELP_RELOAD.."  Cycle through modes\n"
-		..WEPHELP_UNLOAD.."  Jump to Passive mode\n"
-		..WEPHELP_DROP.."  Next D.E.R.P."
+		LWPHELP_FIREMODE..StringTable.Localize("$DERPCWH_FMODE")
+		..LWPHELP_FIRESHOOT
+		..LWPHELP_ALTFIRE..StringTable.Localize("$DERPCWH_ALTFIRE")
+		..LWPHELP_USE..StringTable.Localize("$DERPCWH_USE")
+		..LWPHELP_RELOAD..StringTable.Localize("$DERPCWH_RELOAD")
+		..LWPHELP_UNLOAD..StringTable.Localize("$DERPCWH_UNLOAD")
+		..LWPHELP_DROP..StringTable.Localize("$DERPCWH_DROP")
 		;
 	}
 	override void DrawSightPicture(
@@ -1105,7 +1110,7 @@ class DERPController:HDWeapon{
 				invoker.derps.delete(invoker.weaponstatus[DRPCS_INDEX]);
 				if(!invoker.derps.size()){
 					A_SelectWeapon("HDFist");
-					invoker.destroy();
+					invoker.GoAwayAndDie();
 				}
 				return;
 			}
